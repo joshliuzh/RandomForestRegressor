@@ -1,0 +1,77 @@
+---
+title: ''
+author: "Josh"
+date: "9/24/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This RMarkdown document serves as Section 5.3 of Josh's data challenge report.
+
+## 5.3. Linear Regression
+
+### 5.3.1. Feature Engineering
+
+Because the predictors have been narrowed down to `var_2`, `var_3`, `var_9`, and `var_10`, we are now going to transform these features. The transformation will be a polynomial up to the 3rd degree.
+
+```{r}
+masterData = read.csv('Model Test Data.csv')
+trainIndex = sample(seq(1, nrow(masterData), 80))
+data = masterData[trainIndex,]
+testData = masterData[-trainIndex,]
+data = read.csv('Model Test Data.csv')
+data = data[, c('y', 'var_2', "var_3", "var_9", "var_10")]
+hist(data$var_2)
+par(mfrow = c(2, 2))
+hist(data$var_2)
+hist(data$var_3)
+hist(data$var_9)
+hist(data$var_10)
+plot(data$var_2, data$y, col='dodgerblue')
+plot(data$var_3, data$y, col='dodgerblue')
+plot(data$var_9, data$y, col='dodgerblue')
+plot(data$var_10, data$y, col='dodgerblue')
+```
+
+Here are my observations:
+
+1. There is a relationship between `y` and `var_2` in the quadratic degree;
+2. `y` decreases in `var_3` when `var_3` is smaller than 200,000.
+3. `y` increases in `var_9`, when `var_9` is between 100,000 and 200,000.
+
+Therefore, I will add $`var_2`^2$ as a new predictor, and restrict `var_3` and `var_9` with an indicator dummy variable.
+
+```{r}
+lm1 = lm(y ~ var_2 + I(var_2**2) + I(var_3 * (var_3<=200000)) + I(var_9 * (var_9>100000 & var_9<200000)) + var_10, data = data)
+summary(lm1)
+```
+
+Let's check the diagnostics plot.
+
+```{r}
+par(mfrow = c(2, 2))
+
+plot(lm1, col = 'dodgerblue')
+```
+
+Clearly, our linear regression model violated the assumption of normality and the assumption of homoscedasticity. 
+
+Now let's plot predicted `y` and actual `y` on the test data.
+
+```{r}
+plot(predict(lm1, testData), testData$y, col = 'dodgerblue')
+```
+
+We can see that on the test data, $\hat{y}$ has a very nice relationship on the $y$ value. Therefore, at least we can say that the following formula stands:
+
+
+
+$$y = \beta_0 + (\beta_1var_2+\beta_2var_2^2+\beta_3var_3I(var_3\le200000)+\beta_9var_9I(100000<var_9\le200000)h(var_{10}),$$
+
+where $h(var_{10})$ is some function of `var_10` that deserves further exploration.
